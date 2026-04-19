@@ -21,6 +21,10 @@ exports.register = async (req, res) => {
   } = req.body;
 
   try {
+    if (!["candidate", "recruiter"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
     let user = await User.findOne({ where: { email } });
     if (user) {
       return res.status(400).json({ message: "User already exists" });
@@ -31,7 +35,6 @@ exports.register = async (req, res) => {
 
     let companyId = null;
 
-    // If recruiter, create company first
     if (role === "recruiter" && companyName) {
       const company = await Company.create({
         name: companyName,
@@ -61,9 +64,7 @@ exports.register = async (req, res) => {
       { expiresIn: "1d" },
       (err, token) => {
         if (err) throw err;
-        console.log("JWT Secret:", process.env.JWT_SECRET);
-        console.log("Generated Token:", token);
-        
+
         res.json({
           token,
           user: {
@@ -73,7 +74,7 @@ exports.register = async (req, res) => {
             role: user.role,
           },
         });
-      },
+      }
     );
   } catch (err) {
     console.error(err.message);
@@ -111,6 +112,7 @@ exports.login = async (req, res) => {
       { expiresIn: "1d" },
       (err, token) => {
         if (err) throw err;
+
         res.json({
           token,
           user: {
@@ -120,7 +122,7 @@ exports.login = async (req, res) => {
             role: user.role,
           },
         });
-      },
+      }
     );
   } catch (err) {
     console.error(err.message);
@@ -142,11 +144,9 @@ exports.requestPasswordReset = async (req, res) => {
         .json({ message: "No account found with that email address" });
     }
 
-    // Generate unique token
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    // Create password reset record
     await PasswordReset.create({
       email,
       token,
@@ -164,7 +164,6 @@ exports.requestPasswordReset = async (req, res) => {
   }
 };
 
-// Validate reset token
 exports.validateResetToken = async (req, res) => {
   const { token } = req.params;
   const { PasswordReset } = require("../models");
@@ -191,7 +190,6 @@ exports.validateResetToken = async (req, res) => {
   }
 };
 
-// Reset password
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
   const { PasswordReset } = require("../models");
@@ -211,18 +209,15 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Token has expired" });
     }
 
-    // Find user and update password
     const user = await User.findOne({ where: { email: resetRecord.email } });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Hash new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
-    // Mark token as used
     resetRecord.used = true;
     await resetRecord.save();
 

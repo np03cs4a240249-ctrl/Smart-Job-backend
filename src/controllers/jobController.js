@@ -1,8 +1,13 @@
-const { Job, User, Sequelize, Company } = require("../models");
+const { Job, User, Company, Sequelize } = require("../models");
 const { Op } = Sequelize;
 
+// ================= CREATE JOB =================
 exports.createJob = async (req, res) => {
   try {
+    if (req.user.role !== "recruiter") {
+      return res.status(403).json({ message: "Only recruiters can post jobs" });
+    }
+
     const {
       title,
       description,
@@ -13,6 +18,12 @@ exports.createJob = async (req, res) => {
       experienceLevel,
       skills,
     } = req.body;
+
+    if (!title || !description || !location) {
+      return res.status(400).json({
+        message: "Title, description and location are required",
+      });
+    }
 
     const job = await Job.create({
       title,
@@ -27,13 +38,17 @@ exports.createJob = async (req, res) => {
       status: "open",
     });
 
-    res.json(job);
+    res.status(201).json({
+      message: "Job created successfully",
+      job,
+    });
   } catch (err) {
-    console.error(err.message);
+    console.error("createJob error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ================= GET ALL JOBS =================
 exports.getJobs = async (req, res) => {
   try {
     const {
@@ -48,29 +63,19 @@ exports.getJobs = async (req, res) => {
 
     const where = {};
 
-    if (title) {
-      where.title = { [Op.like]: `%${title}%` };
-    }
-    if (location) {
-      where.location = { [Op.like]: `%${location}%` };
-    }
-    if (jobType) {
-      where.jobType = jobType;
-    }
-    if (experienceLevel) {
-      where.experienceLevel = experienceLevel;
-    }
+    if (title) where.title = { [Op.like]: `%${title}%` };
+    if (location) where.location = { [Op.like]: `%${location}%` };
+    if (jobType) where.jobType = jobType;
+    if (experienceLevel) where.experienceLevel = experienceLevel;
 
     let order = [["createdAt", "DESC"]];
-    if (sort === "oldest") {
-      order = [["createdAt", "ASC"]];
-    }
+    if (sort === "oldest") order = [["createdAt", "ASC"]];
 
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const offset = (pageNumber - 1) * limitNumber;
 
-    const { count, rows: jobs } = await Job.findAndCountAll({
+    const { count, rows } = await Job.findAndCountAll({
       where,
       order,
       limit: limitNumber,
@@ -79,12 +84,13 @@ exports.getJobs = async (req, res) => {
         {
           model: User,
           as: "recruiter",
-          attributes: ["name"],
+          attributes: ["id", "name", "email"],
           include: [
             {
               model: Company,
               as: "company",
-              attributes: ["name", "logo", "website", "about"],
+              attributes: ["id", "name", "logo", "website", "about"],
+              required: false,
             },
           ],
         },
@@ -92,7 +98,7 @@ exports.getJobs = async (req, res) => {
     });
 
     res.json({
-      jobs,
+      jobs: rows,
       pagination: {
         total: count,
         currentPage: pageNumber,
@@ -101,11 +107,12 @@ exports.getJobs = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err.message);
+    console.error("getJobs error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ================= GET JOB BY ID =================
 exports.getJobById = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id, {
@@ -113,12 +120,13 @@ exports.getJobById = async (req, res) => {
         {
           model: User,
           as: "recruiter",
-          attributes: ["name"],
+          attributes: ["id", "name", "email"],
           include: [
             {
               model: Company,
               as: "company",
-              attributes: ["name", "logo", "website", "about"],
+              attributes: ["id", "name", "logo", "website", "about"],
+              required: false,
             },
           ],
         },
@@ -131,62 +139,31 @@ exports.getJobById = async (req, res) => {
 
     res.json(job);
   } catch (err) {
-    console.error(err.message);
+    console.error("getJobById error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-exports.getRelatedJobs = async (req, res) => {
-  try {
-    const job = await Job.findByPk(req.params.id);
-
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    const relatedJobs = await Job.findAll({
-      where: {
-        location: job.location,
-        id: { [Op.ne]: job.id },
-      },
-      limit: 3,
-      include: [
-        {
-          model: User,
-          as: "recruiter",
-          attributes: ["name"],
-          include: [
-            {
-              model: Company,
-              as: "company",
-              attributes: ["name", "logo", "website", "about"],
-            },
-          ],
-        },
-      ],
-    });
-
-    res.json(relatedJobs);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
+// ================= GET MY JOBS =================
 exports.getMyJobs = async (req, res) => {
   try {
+    if (req.user.role !== "recruiter") {
+      return res.status(403).json({ message: "Recruiters only" });
+    }
+
     const jobs = await Job.findAll({
       where: { recruiterId: req.user.id },
       include: [
         {
           model: User,
           as: "recruiter",
-          attributes: ["name"],
+          attributes: ["id", "name", "email"],
           include: [
             {
               model: Company,
               as: "company",
-              attributes: ["name", "logo", "website", "about"],
+              attributes: ["id", "name", "logo", "website", "about"],
+              required: false,
             },
           ],
         },
@@ -195,24 +172,21 @@ exports.getMyJobs = async (req, res) => {
     });
 
     res.json(jobs);
-  } catch (error) {
-    console.error(error.message);
+  } catch (err) {
+    console.error("getMyJobs error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// NEW: Update a job
+// ================= UPDATE JOB =================
 exports.updateJob = async (req, res) => {
   try {
-    const { Job } = require("../models");
-
     const job = await Job.findByPk(req.params.id);
 
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
 
-    // Only owner can edit
     if (job.recruiterId !== req.user.id) {
       return res.status(403).json({ message: "Not authorized" });
     }
@@ -243,36 +217,34 @@ exports.updateJob = async (req, res) => {
       message: "Job updated successfully",
       job,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error("updateJob error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ================= CLOSE JOB =================
 exports.closeJob = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id);
 
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
+    if (!job) return res.status(404).json({ message: "Job not found" });
 
     if (job.recruiterId !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to close this job" });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     job.status = "closed";
     await job.save();
 
-    res.json({ message: "Job closed successfully", job });
-  } catch (error) {
-    console.error(error.message);
+    res.json({ message: "Job closed", job });
+  } catch (err) {
+    console.error("closeJob error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ================= REOPEN JOB =================
 exports.reopenJob = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id);
@@ -282,40 +254,35 @@ exports.reopenJob = async (req, res) => {
     }
 
     if (job.recruiterId !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to reopen this job" });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     job.status = "open";
     await job.save();
 
-    res.json({ message: "Job reopened successfully", job });
-  } catch (error) {
-    console.error(error.message);
+    res.json({ message: "Job reopened", job });
+  } catch (err) {
+    console.error("reopenJob error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// ================= DELETE JOB =================
 exports.deleteJob = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.id);
 
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
+    if (!job) return res.status(404).json({ message: "Job not found" });
 
     if (job.recruiterId !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to delete this job" });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     await job.destroy();
 
     res.json({ message: "Job deleted successfully" });
-  } catch (error) {
-    console.error(error.message);
+  } catch (err) {
+    console.error("deleteJob error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };

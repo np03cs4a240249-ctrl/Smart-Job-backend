@@ -12,9 +12,8 @@ router.get('/my-jobs', authMiddleware, recruiterMiddleware, jobController.getMyJ
 // Public jobs
 router.get('/', jobController.getJobs);
 router.get('/:id', jobController.getJobById);
-router.get('/:id/related', jobController.getRelatedJobs);
 
-// ✅ UPDATE JOB (IMPORTANT FOR EDIT)
+// Update job
 router.put('/:id', authMiddleware, recruiterMiddleware, jobController.updateJob);
 
 // Close / reopen
