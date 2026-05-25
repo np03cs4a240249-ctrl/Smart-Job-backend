@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
+<<<<<<< HEAD
 const OpenAI = require("openai");
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
@@ -188,6 +189,28 @@ function isProfileQuestion(message = "") {
 /* =====================================================
    AUTH USER FROM JWT
 ===================================================== */
+=======
+const { sanitizeString } = require("../utils/security");
+const { Job, User, Company } = require("../models");
+const jwt = require("jsonwebtoken");
+const OpenAI = require("openai");
+
+/* -------------------- GROQ AI SETUP -------------------- */
+
+let aiClient = null;
+
+if (process.env.GROQ_API_KEY) {
+  aiClient = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: "https://api.groq.com/openai/v1",
+  });
+}
+
+const GROQ_MODEL =
+  process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+
+/* -------------------- AUTH USER FROM TOKEN -------------------- */
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 
 function getUserIdFromToken(req) {
   try {
@@ -203,6 +226,11 @@ function getUserIdFromToken(req) {
   }
 }
 
+<<<<<<< HEAD
+=======
+/* -------------------- READ LOGGED USER PROFILE -------------------- */
+
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 async function getLoggedUser(req) {
   const userId = getUserIdFromToken(req);
 
@@ -220,6 +248,10 @@ async function getLoggedUser(req) {
       "website",
       "companyType",
     ],
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
     include: [
       {
         model: Company,
@@ -231,6 +263,7 @@ async function getLoggedUser(req) {
   });
 }
 
+<<<<<<< HEAD
 /* =====================================================
    KEYWORDS
 ===================================================== */
@@ -330,6 +363,18 @@ async function getMatchingJobs(message = "", user = null) {
       [Op.or]: orConditions,
     },
     attributes: [
+=======
+/* -------------------- READ OPEN JOBS FROM DATABASE -------------------- */
+
+async function getAllOpenJobs() {
+  return Job.findAll({
+    where: {
+      status: "open",
+    },
+
+    attributes: [
+      "id",
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
       "title",
       "description",
       "requirements",
@@ -338,23 +383,41 @@ async function getMatchingJobs(message = "", user = null) {
       "jobType",
       "experienceLevel",
       "skills",
+<<<<<<< HEAD
       "createdAt",
     ],
+=======
+      "contactEmail",
+      "contactPhone",
+      "createdAt",
+    ],
+
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
     include: [
       {
         model: User,
         as: "recruiter",
+<<<<<<< HEAD
         attributes: ["name"],
+=======
+        attributes: ["id", "name"],
+
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
         include: [
           {
             model: Company,
             as: "company",
+<<<<<<< HEAD
             attributes: ["name", "about"],
+=======
+            attributes: ["name", "website", "about"],
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
             required: false,
           },
         ],
       },
     ],
+<<<<<<< HEAD
     limit: 8,
     order: [["createdAt", "DESC"]],
   });
@@ -566,15 +629,38 @@ function formatUser(user) {
   return `
 Name: ${user.name || "Not added"}
 Role: ${user.role || "Not added"}
+=======
+
+    limit: 30,
+    order: [["createdAt", "DESC"]],
+  });
+}
+
+/* -------------------- FORMAT USER FOR AI -------------------- */
+
+function formatUser(user) {
+  if (!user) {
+    return "Guest user, not logged in.";
+  }
+
+  return `
+Name: ${user.name}
+Role: ${user.role}
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 Skills: ${user.skills || "Not added"}
 Bio: ${user.bio || "Not added"}
 Overview: ${user.overview || "Not added"}
 Location: ${user.location || "Not added"}
+<<<<<<< HEAD
+=======
+Website: ${user.website || "Not added"}
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 Company: ${user.company?.name || "Not added"}
 Company Overview: ${user.company?.about || "Not added"}
 `;
 }
 
+<<<<<<< HEAD
 function formatJobs(jobs = []) {
   if (!jobs.length) return "No suitable open jobs found.";
 
@@ -583,6 +669,20 @@ function formatJobs(jobs = []) {
       return `
 Job ${index + 1}
 Title: ${job.title || "Untitled Job"}
+=======
+/* -------------------- FORMAT JOBS FOR AI -------------------- */
+
+function formatJobs(jobs = []) {
+  if (!jobs.length) {
+    return "No open jobs are currently available.";
+  }
+
+  return jobs
+    .map((job) => {
+      return `
+Job ID: ${job.id}
+Title: ${job.title}
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 Company: ${
         job.recruiter?.company?.name ||
         job.recruiter?.name ||
@@ -595,19 +695,30 @@ Experience: ${job.experienceLevel || "Not added"}
 Skills: ${job.skills || "Not added"}
 Description: ${job.description || "Not added"}
 Requirements: ${job.requirements || "Not added"}
+<<<<<<< HEAD
 How to view: Open Find Jobs and search this title: ${job.title || "Untitled Job"}
+=======
+Contact Email: ${job.contactEmail || "Not added"}
+Contact Phone: ${job.contactPhone || "Not added"}
+Link: view-job.html?id=${job.id}
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 `;
     })
     .join("\n");
 }
 
+<<<<<<< HEAD
 /* =====================================================
    LOCAL FALLBACK
 ===================================================== */
+=======
+/* -------------------- LOCAL FALLBACK IF AI FAILS -------------------- */
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 
 function localFallback(message = "", jobs = []) {
   const m = message.toLowerCase();
 
+<<<<<<< HEAD
   if (isGreeting(message)) {
     return "Hello! How can I help you today?";
   }
@@ -635,12 +746,22 @@ function localFallback(message = "", jobs = []) {
 
     const list = jobs
       .slice(0, 4)
+=======
+  if (m.includes("hello") || m.includes("hi") || m.includes("namaste")) {
+    return "Hello! 👋 I am SmartBot. I can help you find suitable jobs, improve your profile, apply for jobs, or guide recruiters.";
+  }
+
+  if (jobs.length) {
+    const list = jobs
+      .slice(0, 5)
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
       .map((job, i) => {
         const company =
           job.recruiter?.company?.name ||
           job.recruiter?.name ||
           "Company not added";
 
+<<<<<<< HEAD
         return `${i + 1}. ${job.title} at ${company} — ${job.location || "Location not added"}. Search this title in Find Jobs.`;
       })
       .join("\n");
@@ -772,6 +893,36 @@ router.post("/", async (req, res) => {
     if (isResumeQuestion(message)) {
       resumeContext = await getResumeContext(user);
     }
+=======
+        return `${i + 1}. ${job.title} at ${company} — ${
+          job.location || "Location not added"
+        }. Open: view-job.html?id=${job.id}`;
+      })
+      .join("\n");
+
+    return `AI is not active right now, but I found these open jobs:\n\n${list}`;
+  }
+
+  return "AI is not active right now. Please check GROQ_API_KEY in your backend .env file.";
+}
+
+/* -------------------- CHAT ROUTE -------------------- */
+
+router.post("/", async (req, res) => {
+  try {
+    const message = sanitizeString(req.body?.message || "");
+
+    if (!message) {
+      return res.json({
+        reply: "Please type a question first.",
+      });
+    }
+
+    const [jobs, user] = await Promise.all([
+      getAllOpenJobs(),
+      getLoggedUser(req),
+    ]);
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 
     if (!aiClient) {
       return res.json({
@@ -779,6 +930,7 @@ router.post("/", async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const userPrompt = `
 User question:
 ${message}
@@ -812,6 +964,66 @@ ${resumeContext || "Not needed for this question."}
         },
       ],
     });
+=======
+    let completion;
+
+    try {
+      completion = await aiClient.chat.completions.create({
+        model: GROQ_MODEL,
+        temperature: 0.7,
+        max_tokens: 700,
+
+        messages: [
+          {
+            role: "system",
+            content: `
+You are SmartBot, a real AI assistant inside Smart Job portal.
+
+You can:
+- greet naturally
+- answer normal user questions
+- recommend suitable jobs using the provided database jobs
+- explain why jobs match the user's skills, location and experience
+- guide candidates about applications, resumes, profiles and job search
+- guide recruiters about posting jobs, applications and company profiles
+
+Important safety rules:
+- Never reveal passwords.
+- Never reveal JWT tokens.
+- Never reveal reset tokens.
+- Never reveal database credentials.
+- Never expose hidden private user data.
+- Use only the data provided in this prompt.
+- Do not invent jobs that are not listed.
+- If recommending jobs, include title, company, location and link.
+- Job links must be exactly: view-job.html?id=JOB_ID
+- If no matching job exists, say that and suggest profile/skill improvements.
+- Keep answers friendly and practical.
+`,
+          },
+          {
+            role: "user",
+            content: `
+User question:
+${message}
+
+Current user profile:
+${formatUser(user)}
+
+Open jobs from database:
+${formatJobs(jobs)}
+`,
+          },
+        ],
+      });
+    } catch (aiError) {
+      console.error("GROQ AI ERROR:", aiError);
+
+      return res.json({
+        reply: localFallback(message, jobs),
+      });
+    }
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 
     const aiReply = completion?.choices?.[0]?.message?.content;
 
@@ -828,7 +1040,12 @@ ${resumeContext || "Not needed for this question."}
   }
 });
 
+<<<<<<< HEAD
 console.log("OPENROUTER KEY EXISTS:", !!process.env.OPENROUTER_API_KEY);
 console.log("OPENROUTER MODEL:", AI_MODEL);
+=======
+console.log("GROQ KEY EXISTS:", !!process.env.GROQ_API_KEY);
+console.log("GROQ MODEL:", GROQ_MODEL);
+>>>>>>> 4a6cd6793a20545bba618394f6d9937b5082047a
 
 module.exports = router;
