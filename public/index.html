@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Job Backend</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; line-height: 1.6; }
+    code { background: #f4f4f4; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    iframe { width: 100%; min-height: 720px; border: 1px solid #ddd; }
+    .box { background: #fafafa; padding: 1rem; border: 1px solid #eee; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Smart Job Backend</h1>
+  <p>This backend is now serving files and pages from the same origin.</p>
+  <div class="box">
+    <p>Open this page in your browser from:</p>
+    <ul>
+      <li><code>http://localhost:5000</code></li>
+    </ul>
+    <p>Then the PDF below will load from the same origin and avoid cross-origin frame blocking.</p>
+  </div>
+  <h2>Sample PDF</h2>
+  <p><a href="/uploads/1778161541951.pdf" target="_blank">Open sample resume in a new tab</a></p>
+  <iframe src="/uploads/1778161541951.pdf"></iframe>
+</body>
+</html>
